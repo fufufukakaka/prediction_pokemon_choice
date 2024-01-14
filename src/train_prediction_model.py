@@ -1,15 +1,16 @@
+import random
+
 import cloudpickle
-import torch
-from datasets import Dataset, load_dataset
+from datasets import Dataset
 from sklearn.model_selection import train_test_split
 from transformers import (
-    AutoModelForMaskedLM,
     AutoTokenizer,
     BertForSequenceClassification,
-    BertTokenizer,
     Trainer,
     TrainingArguments,
 )
+
+random.seed(42)
 
 
 def main():
@@ -25,9 +26,10 @@ def main():
         return example
 
 
-    data = cloudpickle.load(open("data/pokemon_selection/poke_battle_logger_pokemon_selection_preprocessed.pkl", "rb"))
-    train, test = train_test_split(data, test_size=0.1, random_state=42)
-    train, validation = train_test_split(train, test_size=0.1, random_state=42)
+    train = cloudpickle.load(open("data/pokemon_selection/train_poke_battle_logger_pokemon_selection_preprocessed.pkl", "rb"))
+    random.shuffle(train)
+    validation = cloudpickle.load(open("data/pokemon_selection/validation_poke_battle_logger_pokemon_selection_preprocessed.pkl", "rb"))
+    random.shuffle(validation)
 
     dataset = Dataset.from_list(train)
     train_tokenized_dataset = dataset.map(tokenize_function, batched=True)
@@ -35,11 +37,9 @@ def main():
     dataset = Dataset.from_list(validation)
     validation_tokenized_dataset = dataset.map(tokenize_function, batched=True)
     validation_tokenized_dataset = validation_tokenized_dataset.map(label_to_number)
-    # dataset = Dataset.from_list(test)
-    # test_tokenized_dataset = dataset.map(tokenize_function, batched=True)
 
     training_args = TrainingArguments(
-        output_dir='./results',
+        output_dir='./pokemon_selection_predictor',
         evaluation_strategy="epoch",
         learning_rate=2e-5,
         num_train_epochs=10,
